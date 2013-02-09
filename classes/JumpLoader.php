@@ -86,7 +86,7 @@ class JumpLoader extends \FileUpload
 
               // Register Hooks
               $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'cleanTmpFolder');
-              $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'sendResponseToClient');
+              $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'sendMessageToBrowser');
 
               // Specify upload directory - storage for reconstructed uploaded file
               $this->targetDir = $this->Input->get('pid');
@@ -110,7 +110,7 @@ class JumpLoader extends \FileUpload
        /**
         * Post upload Hook
         */
-       public function sendResponseToClient()
+       public function sendMessageToBrowser()
        {
               echo json_encode(array('messagesString' => $this->getMessages(false, true)));
               exit();
