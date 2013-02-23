@@ -295,7 +295,11 @@ class JumpLoader extends \FileUpload
 
               // Maximum file upload size
               $objTemplate->maxFileSize = $this->getMaximumUploadSize();
-
+              
+              
+              // noJavaAlert
+              $objTemplate->noJavaAlert = $GLOBALS['TL_LANG']['tl_files']['noJavaAlert'];
+              
               return $objTemplate->parse();
        }
 

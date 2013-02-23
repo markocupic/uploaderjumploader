@@ -34,7 +34,7 @@
 	<param name="ac_fireUploaderFilePartitionUploaded" value="true"/>
 
 </applet>
-
+<div class="noJavaAlert"><p><?php echo $this->noJavaAlert; ?></p></div> 
 
 
 <script>
@@ -45,7 +45,8 @@
 	 */
 	function appletInitialized( applet )
 	{
-		applet.getUploaderConfig().setUserAgent(navigator.userAgent); 
+		$$('.noJavaAlert').setStyle('display', 'none');
+              applet.getUploaderConfig().setUserAgent(navigator.userAgent); 
 		appletGlobal = applet;		
 		
 		var uploader = appletGlobal.getUploader();

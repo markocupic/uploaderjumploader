@@ -1,6 +1,6 @@
 <?php
 /**
- * TL_ROOT/system/modules/uploaderjumploader/languages/de/tl_user.php 
+ * TL_ROOT/system/modules/uploaderjumploader/languages/de/tl_files.php 
  * 
  * Contao extension: uploaderjumploader 1.0.0 rc1 
  * Deutsch translation file 
@@ -15,6 +15,6 @@
  * permanent text corrections which are update-safe. 
  */
  
-$GLOBALS['TL_LANG']['tl_user']['JumpLoader'] = "JumpLoader";
+$GLOBALS['TL_LANG']['tl_files']['noJavaAlert'] = "Das Applet erfordert ein java Plug-in für den Betrieb. Bitte downloaden Sie das Java-Browser-Plugin oder aktivieren Sie dieses.";
  
 ?>
