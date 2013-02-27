@@ -56,12 +56,6 @@ class JumpLoader extends \FileUpload
        protected $partitionCount;
 
        /**
-        * fileLength
-        * @var integer
-        */
-       protected $fileLength;
-
-       /**
         * tmpFilePrefix
         * @var string
         */
@@ -72,6 +66,12 @@ class JumpLoader extends \FileUpload
         * @var string
         */
        protected $tmpDir = 'system/tmp/';
+
+       /**
+        * strTmpFile
+        * @var string
+        */
+       protected $strTmpFile;
 
        /**
         * Initialize the object
@@ -100,7 +100,6 @@ class JumpLoader extends \FileUpload
                      $this->fileId = $this->Input->post('fileId');
                      $this->partitionIndex = $this->Input->post('partitionIndex');
                      $this->partitionCount = $this->Input->post('partitionCount');
-                     $this->fileLength = $this->Input->post('fileLength');
 
                      // Generate the tempFile - Praefix
                      $this->tmpFilePrefix = sprintf($this->tmpFilePrefix, md5($this->fileId));
@@ -256,11 +255,10 @@ class JumpLoader extends \FileUpload
                      }
                      else
                      {
-                            // Copy the file to the selected target and delete the tmp-file
+                            // Copy the file to the selected target
                             $uploadedFile = new \File($this->strTmpFile);
                             $strNewFile = $strTarget . '/' . $file['name'];
                             $uploadedFile->copyTo($strNewFile);
-                            $uploadedFile->chmod(0777);
                             $uploadedFile->close();
 
                             // Set CHMOD and resize if neccessary
