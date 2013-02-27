@@ -20,7 +20,7 @@
 	<param name="uc_maxFileLength" value="<?php echo $this->maxFileSize; ?>"/>
 <?php endif; ?>
 
-	<param name="uc_partitionLength" value="1048576"/>
+	<param name="uc_partitionLength" value="2100000"/>
 	
 	<!-- lang config -->       
 	<param name="ac_messagesZipUrl" value="<?php echo $this->jumploaderLanguageFile; ?>"/>

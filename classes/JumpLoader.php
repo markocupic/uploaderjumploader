@@ -65,7 +65,7 @@ class JumpLoader extends \FileUpload
         * tmpFilePrefix
         * @var string
         */
-       protected $tmpFilePrefix = 'JUMPL_%s_';
+       protected $tmpFilePrefix = 'JUMPL_%s';
 
        /**
         * tmpDir
@@ -81,6 +81,8 @@ class JumpLoader extends \FileUpload
               // Load user object before calling the parent constructor
               $this->import('BackendUser', 'User');
               $this->import('Files');
+              $this->import('Database');
+
               parent::__construct();
               $this->loadLanguageFile('default');
 
@@ -189,75 +191,94 @@ class JumpLoader extends \FileUpload
                      echo "Perhaps file wasn't uploaded via HTTP POST. Possible file upload attack!";
                      return false;
               }
+              // Read content of uploaded file
+              $tmpFileHandle = @fopen($_FILES['file']['tmp_name'], 'r');
+              $content = @stream_get_contents($tmpFileHandle);
+              @fclose($tmpFileHandle);
 
-              $targetFilePath = $this->tmpDir . $this->tmpFilePrefix . md5(session_id() . $this->fileId . $this->partitionIndex);
-              if (!$this->Files->move_uploaded_file($_FILES['file']['tmp_name'], $targetFilePath))
-              {
-                     // Error
-                     // echo json_encode(array('messagesString' => '<p class="tl_gerror">Could not load up partition. Error in: ' . __METHOD__ . ' on line: ' . __LINE__ . '.</p>'));
-                     exit();
-              }
-              else
-              {
-                     // echo json_encode(array('messagesString' => '<p class="tl_confirm">Partition ' . $this->partitionIndex . ' of "' . $this->fileName . '" uploaded successfully!</p>'));
-              }
+              // add the content of the partition to the tmp-file
+              $this->strTmpFile = 'system/tmp/' . $this->tmpFilePrefix;
+              $newTmpFile = new \File($this->strTmpFile);
+              $oldContent = $newTmpFile->getContent();
+              $newContent = $oldContent . $content;
+              $newTmpFile->truncate();
+              $newTmpFile->write($newContent);
+              $newTmpFile->close();
 
               // Exit script if it is not the last partition
               if ($this->partitionIndex < $this->partitionCount - 1)
               {
                      exit();
               }
+       }
 
-              // Check if we have collected all partitions properly
-              $allInPlace = true;
-              $partitionsLength = 0;
-              for ($i = 0; $allInPlace && $i < $this->partitionCount; $i++)
+       /**
+        * Check the uploaded files and move them to the target directory
+        * This method overwrites the parent method
+        * @param string
+        * @return array
+        * @throws \Exception
+        */
+       public function uploadTo($strTarget)
+       {
+              $arrUploaded = array();
+
+              if ($strTarget == '' || strpos($strTarget, '../') !== false)
               {
-                     $partitionFile = $this->tmpDir . $this->tmpFilePrefix . md5(session_id() . $this->fileId . $i);
-                     if (file_exists(TL_ROOT . '/' . $partitionFile))
+                     throw new \Exception("Invalid target path $strTarget");
+              }
+
+              if (!file_exists(TL_ROOT . '/' . $this->tmpFile))
+              {
+                     throw new \Exception("The temporary file '" . $this->tmpFile . "'does not exist.");
+              }
+              else
+              {
+                     // Get the files-array from $_FILES
+                     $arrFiles = $this->getFilesFromGlobal();
+                     $file = $arrFiles[0];
+
+                     // Romanize the filename
+                     $file['name'] = strip_tags($file['name']);
+                     $file['name'] = utf8_romanize($file['name']);
+                     $file['name'] = str_replace('"', '', $file['name']);
+
+                     // check for allowed extension
+                     $strExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
+                     $arrAllowedTypes = trimsplit(',', strtolower($GLOBALS['TL_CONFIG']['uploadTypes']));
+
+                     // File type not allowed
+                     if (!in_array(strtolower($strExtension), $arrAllowedTypes))
                      {
-                            $partitionsLength += filesize(TL_ROOT . '/' . $partitionFile);
+                            \Message::addError(sprintf($GLOBALS['TL_LANG']['ERR']['filetype'], $strExtension));
+                            $this->log('File type "' . $strExtension . '" is not allowed to be uploaded (' . $file['name'] . ')', 'Uploader uploadTo()', TL_ERROR);
+                            $this->blnHasError = true;
                      }
                      else
                      {
-                            $allInPlace = false;
+                            // Copy the file to the selected target and delete the tmp-file
+                            $uploadedFile = new \File($this->strTmpFile);
+                            $strNewFile = $strTarget . '/' . $file['name'];
+                            $uploadedFile->copyTo($strNewFile);
+                            $uploadedFile->chmod(0777);
+                            $uploadedFile->close();
+
+                            // Set CHMOD and resize if neccessary
+                            $this->Files->chmod($strNewFile, $GLOBALS['TL_CONFIG']['defaultFileChmod']);
+                            $blnResized = $this->resizeUploadedImage($strNewFile, $file);
+
+                            // Notify the user
+                            if (!$blnResized)
+                            {
+                                   \Message::addConfirmation(sprintf($GLOBALS['TL_LANG']['MSC']['fileUploaded'], $file['name']));
+                                   $this->log('File "' . $file['name'] . '" uploaded successfully', 'Uploader uploadTo()', TL_FILES);
+                            }
+
+                            $arrUploaded[] = $strNewFile;
                      }
               }
+              return $arrUploaded;
 
-              /**
-               * @todo generiert zu Unrecht Fehler
-               */
-              // Issue error if last partition uploaded, but partitions validation failed
-              if ($this->partitionIndex == $this->partitionCount - 1 && (!$allInPlace || $partitionsLength != intval($this->fileLength)))
-              {
-                     // echo "Error: Upload validation error";
-                     // return;
-              }
-
-              // Reconstruct original file if all ok
-              if ($allInPlace)
-              {
-                     // Collect the content of all partitions
-                     $content = '';
-                     for ($i = 0; $allInPlace && $i < $this->partitionCount; $i++)
-                     {
-                            // Read partition file
-                            $partitionFile = $this->tmpDir . $this->tmpFilePrefix . md5(session_id() . $this->fileId . $i);
-                            $partitionFileHandle = new \File($partitionFile);
-                            $partContent = $partitionFileHandle->getContent();
-                            $partitionFileHandle->close();
-                            // Remove partition file from the temp folder
-                            $partitionFileHandle->delete();
-
-                            $content .= $partContent;
-                     }
-
-                     // Rebuild the original file & store the content of all partitions in $_FILES['file']['tmp_name']
-                     $originalfileHandle = fopen($_FILES['file']['tmp_name'], 'r+');
-                     @ftruncate($originalfileHandle, 0);
-                     @fwrite($originalfileHandle, $content);
-                     @fclose($originalfileHandle);
-              }
        }
 
        /**
@@ -295,11 +316,10 @@ class JumpLoader extends \FileUpload
 
               // Maximum file upload size
               $objTemplate->maxFileSize = $this->getMaximumUploadSize();
-              
-              
+
               // noJavaAlert
               $objTemplate->noJavaAlert = $GLOBALS['TL_LANG']['tl_files']['noJavaAlert'];
-              
+
               return $objTemplate->parse();
        }
 
@@ -311,15 +331,20 @@ class JumpLoader extends \FileUpload
         */
        protected function getFilesFromGlobal($strKey = '')
        {
+              if ($strKey === '')
+              {
+                     $strKey = 'file';
+              }
+
               $arrFiles = array();
 
-              $arrFiles[0] = array
+              $arrFiles[] = array
               (
-                     'name' => $_FILES['file']['name'],
-                     'type' => $_FILES['file']['type'],
-                     'tmp_name' => $_FILES['file']['tmp_name'],
-                     'error' => $_FILES['file']['error'],
-                     'size' => $_FILES['file']['size']
+                     'name' => $_FILES[$strKey]['name'],
+                     'type' => $_FILES[$strKey]['type'],
+                     'tmp_name' => $_FILES[$strKey]['tmp_name'],
+                     'error' => $_FILES[$strKey]['error'],
+                     'size' => $_FILES[$strKey]['size']
               );
               return $arrFiles;
        }
