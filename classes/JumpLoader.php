@@ -291,7 +291,7 @@ class JumpLoader extends \FileUpload
               $objTemplate = new \BackendTemplate('be_jumploader');
               $objTemplate->jarFile = $this->Environment->base . 'system/modules/uploaderjumploader/assets/jumploader_z.jar';
 
-              $url = sprintf('contao/main.php?do=files&act=move&mode=2&pid=%s&id=&rt=%s', $this->targetDir, REQUEST_TOKEN);
+              $url = sprintf('contao/main.php?do=files&act=move&mode=2&pid=%s&id=&rt=%s', $this->urlEncode($this->targetDir), REQUEST_TOKEN);
               $objTemplate->uploadUrl = $this->Environment->base . $url;
 
               // PHPSESSIONID & BE_USER_AUTH
