@@ -12,8 +12,10 @@
  */
 
 
-/**
- * JumpLoader version
- */
-@define('JL_VERSION', '2.23.0');
+// JumpLoader version
+@define('JL_VERSION', '2.28.0');
+
+// Register Hooks
+$GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'cleanTmpFolder');
+$GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'sendMessageToBrowser');
 

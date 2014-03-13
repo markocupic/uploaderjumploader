@@ -25,6 +25,7 @@ namespace Uploaderjumploader;
  */
 class JumpLoader extends \FileUpload
 {
+
        /**
         * targetDir
         * @var string
@@ -73,11 +74,13 @@ class JumpLoader extends \FileUpload
         */
        protected $strTmpFile;
 
+
        /**
         * Initialize the object
         */
        public function __construct()
        {
+
               // Load user object before calling the parent constructor
               $this->import('BackendUser', 'User');
               $this->import('Files');
@@ -85,10 +88,6 @@ class JumpLoader extends \FileUpload
 
               parent::__construct();
               $this->loadLanguageFile('default');
-
-              // Register Hooks
-              $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'cleanTmpFolder');
-              $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'sendMessageToBrowser');
 
               // Specify upload directory - storage for reconstructed uploaded file
               $this->targetDir = $this->Input->get('pid');
@@ -108,32 +107,52 @@ class JumpLoader extends \FileUpload
               }
        }
 
+
        /**
         * Post upload Hook
         */
        public function sendMessageToBrowser()
        {
+
               echo json_encode(array('messagesString' => $this->getMessages(false, true)));
               exit();
        }
+
 
        /**
         * Post upload Hook
         */
        public function cleanTmpFolder()
        {
+
               foreach (scan(TL_ROOT . '/' . $this->tmpDir) as $source)
               {
-                     if (is_file(TL_ROOT . '/' . $this->tmpDir . $source))
+                     $aprefx = explode('_', $this->tmpFilePrefix);
+                     $prefx = $aprefx[0];
+                     if (strpos($this->tmpDir . $source, $prefx))
                      {
                             $tmpFile = new \File($this->tmpDir . $source);
-                            if (false !== strpos($tmpFile->basename, $this->tmpFilePrefix))
+                            $arrFilesInSession = !empty($_SESSION['jumploader']['tmp_files']) ? : array();
+                            if (array_search($arrFilesInSession, $this->tmpDir . $source) !== false)
                             {
+                                   // delete file if it is stored in the session
                                    $tmpFile->delete();
+                            }
+                            else
+                            {
+                                   // purge folder from old files
+                                   // get file modification time
+                                   $fmtime = filemtime(TL_ROOT . '/' . $this->tmpDir . $source);
+                                   if ($fmtime + 86400 < time())
+                                   {
+                                          // delete file that are older then 1 day
+                                          $tmpFile->delete();
+                                   }
                             }
                      }
               }
        }
+
 
        /**
         * getMessages from session
@@ -141,7 +160,14 @@ class JumpLoader extends \FileUpload
         */
        public function getMessages($blnDcLayout = false, $blnNoWrapper = false)
        {
-              $arrTypes = array('TL_ERROR', 'TL_CONFIRM', 'TL_NEW', 'TL_INFO', 'TL_RAW');
+
+              $arrTypes = array(
+                     'TL_ERROR',
+                     'TL_CONFIRM',
+                     'TL_NEW',
+                     'TL_INFO',
+                     'TL_RAW'
+              );
               $strMessages = '';
               foreach ($arrTypes as $strType)
               {
@@ -180,11 +206,13 @@ class JumpLoader extends \FileUpload
               return $strMessages;
        }
 
+
        /**
         * Partitioned upload file handler script
         */
        public function handleFilePartitions()
        {
+
               if (!is_uploaded_file($_FILES['file']['tmp_name']))
               {
                      echo "Perhaps file wasn't uploaded via HTTP POST. Possible file upload attack!";
@@ -198,6 +226,7 @@ class JumpLoader extends \FileUpload
               // add the content of the partition to the tmp-file
               $this->strTmpFile = 'system/tmp/' . $this->tmpFilePrefix;
               $newTmpFile = new \File($this->strTmpFile);
+              $_SESSION['jumploader']['tmp_files'][$this->fileId] = $this->strTmpFile;
               $oldContent = $newTmpFile->getContent();
               $newContent = $oldContent . $content;
               $newTmpFile->truncate();
@@ -211,6 +240,7 @@ class JumpLoader extends \FileUpload
               }
        }
 
+
        /**
         * Check the uploaded files and move them to the target directory
         * This method overwrites the parent method
@@ -220,6 +250,7 @@ class JumpLoader extends \FileUpload
         */
        public function uploadTo($strTarget)
        {
+
               $arrUploaded = array();
 
               if ($strTarget == '' || strpos($strTarget, '../') !== false)
@@ -279,6 +310,7 @@ class JumpLoader extends \FileUpload
 
        }
 
+
        /**
         * Generate the markup
         * This method overwrites the parent method
@@ -286,6 +318,7 @@ class JumpLoader extends \FileUpload
         */
        public function generateMarkup()
        {
+
               $this->import('BackendUser', 'User');
 
               $objTemplate = new \BackendTemplate('be_jumploader');
@@ -321,6 +354,7 @@ class JumpLoader extends \FileUpload
               return $objTemplate->parse();
        }
 
+
        /**
         * Overwrite this method as apparently jumploader has quite a different $_FILES structure because
         * the applet calls this script for every single file
@@ -329,6 +363,7 @@ class JumpLoader extends \FileUpload
         */
        protected function getFilesFromGlobal($strKey = '')
        {
+
               if ($strKey === '')
               {
                      $strKey = 'file';
@@ -336,8 +371,7 @@ class JumpLoader extends \FileUpload
 
               $arrFiles = array();
 
-              $arrFiles[] = array
-              (
+              $arrFiles[] = array(
                      'name' => $_FILES[$strKey]['name'],
                      'type' => $_FILES[$strKey]['type'],
                      'tmp_name' => $_FILES[$strKey]['tmp_name'],
