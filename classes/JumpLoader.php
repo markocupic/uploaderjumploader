@@ -80,15 +80,18 @@ class JumpLoader extends \FileUpload
         */
        public function __construct()
        {
+              parent::__construct();
 
               // Load user object before calling the parent constructor
               $this->import('BackendUser', 'User');
               $this->import('Files');
               $this->import('Database');
 
-              parent::__construct();
-              $this->loadLanguageFile('default');
+              // Register Hooks
+              $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'cleanTmpFolder');
+              $GLOBALS['TL_HOOKS']['postUpload'][] = array('JumpLoader', 'sendMessageToBrowser');
 
+              $this->loadLanguageFile('default');
               // Specify upload directory - storage for reconstructed uploaded file
               $this->targetDir = $this->Input->get('pid');
 
@@ -160,7 +163,6 @@ class JumpLoader extends \FileUpload
         */
        public function getMessages($blnDcLayout = false, $blnNoWrapper = false)
        {
-
               $arrTypes = array(
                      'TL_ERROR',
                      'TL_CONFIRM',
